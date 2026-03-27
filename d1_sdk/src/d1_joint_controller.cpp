@@ -9,8 +9,10 @@
  *
  * Controls:
  *   UP/DOWN arrows  - select joint
- *   LEFT/RIGHT arrows - decrease/increase angle by 1°
- *   [ / ]           - decrease/increase angle by 10°
+ *   LEFT/RIGHT arrows - decrease/increase angle by 1° (or 1mm for gripper)
+ *   [ / ]           - decrease/increase angle by 10° (or 5mm for gripper)
+ *   o               - open gripper fully (65mm)
+ *   c               - close gripper fully (0mm)
  *   SPACE           - send all joints to robot (all-joint mode)
  *   z               - zero all joints (return to zero)
  *   e               - enable all motors
@@ -121,9 +123,9 @@ void drawUI(int selected, const std::string& lastCmd, const std::string& status)
 
     // Header
     attron(A_BOLD | COLOR_PAIR(1));
-    mvprintw(row++, 0, "╔══════════════════════════════════════════════════════════╗");
-    mvprintw(row++, 0, "║        Unitree D1 Arm - Joint Controller                ║");
-    mvprintw(row++, 0, "╚══════════════════════════════════════════════════════════╝");
+    mvprintw(row++, 0, "+=========================================================+");
+    mvprintw(row++, 0, "|        Unitree D1 Arm - Joint Controller                |");
+    mvprintw(row++, 0, "+=========================================================+");
     attroff(A_BOLD | COLOR_PAIR(1));
     row++;
 
@@ -131,7 +133,7 @@ void drawUI(int selected, const std::string& lastCmd, const std::string& status)
     attron(A_BOLD);
     mvprintw(row++, 2, "%-22s  %7s  %7s  %7s  %s", "Joint", "Min", "Target", "Max", "Slider");
     attroff(A_BOLD);
-    mvprintw(row++, 2, "─────────────────────────────────────────────────────────");
+    mvprintw(row++, 2, "---------------------------------------------------------");
 
     // Joint rows
     for (int i = 0; i < NUM_JOINTS; i++) {
@@ -147,16 +149,17 @@ void drawUI(int selected, const std::string& lastCmd, const std::string& status)
         int   filled = (int)(pct * barW + 0.5f);
         filled = filled < 0 ? 0 : (filled > barW ? barW : filled);
 
-        // Bar
+        // Bar (plain ASCII)
         char bar[32];
-        for (int b = 0; b < barW; b++) bar[b] = (b < filled) ? '█' : '░';
+        for (int b = 0; b < barW; b++) bar[b] = (b < filled) ? '#' : '-';
         bar[barW] = '\0';
 
-        mvprintw(row, 2, " %-22s %6.1f°  %6.1f°  %6.1f°  [%s]",
+        const char* unit = (i == 6) ? "mm" : "dg";
+        mvprintw(row, 2, " %-22s %5.1f%s  %5.1f%s  %5.1f%s  [%s]",
             j.name,
-            j.min_deg,
-            j.value,
-            j.max_deg,
+            j.min_deg, unit,
+            j.value,   unit,
+            j.max_deg, unit,
             bar);
 
         if (isSel) attroff(A_REVERSE | COLOR_PAIR(2));
@@ -164,7 +167,7 @@ void drawUI(int selected, const std::string& lastCmd, const std::string& status)
     }
 
     row++;
-    mvprintw(row++, 2, "─────────────────────────────────────────────────────────");
+    mvprintw(row++, 2, "---------------------------------------------------------");
 
     // Status line
     attron(COLOR_PAIR(3));
@@ -180,8 +183,9 @@ void drawUI(int selected, const std::string& lastCmd, const std::string& status)
 
     // Controls help
     attron(A_DIM);
-    mvprintw(row++, 2, "  ↑↓  Select joint    ←→  Angle ±1°    [ ]  Angle ±10°");
-    mvprintw(row++, 2, "  SPACE  Send all joints    z  Zero all    e  Enable    d  Disable    q  Quit");
+    mvprintw(row++, 2, "  UP/DN  Select joint    LT/RT  Angle +/-1deg/mm    [ ]  Angle +/-10deg/5mm");
+    mvprintw(row++, 2, "  o  Gripper open    c  Gripper close    SPACE  Send all joints");
+    mvprintw(row++, 2, "  z  Zero all    e  Enable    d  Disable    q  Quit");
     attroff(A_DIM);
 
     refresh();
@@ -248,7 +252,7 @@ int main(int argc, char** argv) {
                 break;
 
             case KEY_LEFT: {
-                float step = (selected == 6) ? 1.0f : 1.0f;
+                float step = 1.0f;
                 joints[selected].value = clamp(joints[selected].value - step,
                                                joints[selected].min_deg,
                                                joints[selected].max_deg);
@@ -257,13 +261,14 @@ int main(int argc, char** argv) {
                 msg.data_() = lastCmd;
                 publisher.Write(msg);
                 seq++;
+                std::string unit = (selected == 6) ? "mm" : "deg";
                 status = "Sent J" + std::to_string(selected) + " = " +
-                         std::to_string((int)joints[selected].value) + "°";
+                         std::to_string((int)joints[selected].value) + unit;
                 break;
             }
 
             case KEY_RIGHT: {
-                float step = (selected == 6) ? 1.0f : 1.0f;
+                float step = 1.0f;
                 joints[selected].value = clamp(joints[selected].value + step,
                                                joints[selected].min_deg,
                                                joints[selected].max_deg);
@@ -271,13 +276,14 @@ int main(int argc, char** argv) {
                 msg.data_() = lastCmd;
                 publisher.Write(msg);
                 seq++;
+                std::string unit = (selected == 6) ? "mm" : "deg";
                 status = "Sent J" + std::to_string(selected) + " = " +
-                         std::to_string((int)joints[selected].value) + "°";
+                         std::to_string((int)joints[selected].value) + unit;
                 break;
             }
 
             case '[': {
-                float step = 10.0f;
+                float step = (selected == 6) ? 5.0f : 10.0f;
                 joints[selected].value = clamp(joints[selected].value - step,
                                                joints[selected].min_deg,
                                                joints[selected].max_deg);
@@ -285,13 +291,14 @@ int main(int argc, char** argv) {
                 msg.data_() = lastCmd;
                 publisher.Write(msg);
                 seq++;
+                std::string unit = (selected == 6) ? "mm" : "deg";
                 status = "Sent J" + std::to_string(selected) + " = " +
-                         std::to_string((int)joints[selected].value) + "° (-10°)";
+                         std::to_string((int)joints[selected].value) + unit;
                 break;
             }
 
             case ']': {
-                float step = 10.0f;
+                float step = (selected == 6) ? 5.0f : 10.0f;
                 joints[selected].value = clamp(joints[selected].value + step,
                                                joints[selected].min_deg,
                                                joints[selected].max_deg);
@@ -299,8 +306,31 @@ int main(int argc, char** argv) {
                 msg.data_() = lastCmd;
                 publisher.Write(msg);
                 seq++;
+                std::string unit = (selected == 6) ? "mm" : "deg";
                 status = "Sent J" + std::to_string(selected) + " = " +
-                         std::to_string((int)joints[selected].value) + "° (+10°)";
+                         std::to_string((int)joints[selected].value) + unit;
+                break;
+            }
+
+            case 'o': case 'O': {
+                // Open gripper fully
+                joints[6].value = 65.0f;
+                lastCmd = buildSingleJointCmd(seq, 6, 65.0f);
+                msg.data_() = lastCmd;
+                publisher.Write(msg);
+                seq++;
+                status = "Gripper OPEN (65mm)";
+                break;
+            }
+
+            case 'c': case 'C': {
+                // Close gripper fully
+                joints[6].value = 0.0f;
+                lastCmd = buildSingleJointCmd(seq, 6, 0.0f);
+                msg.data_() = lastCmd;
+                publisher.Write(msg);
+                seq++;
+                status = "Gripper CLOSED (0mm)";
                 break;
             }
 
