@@ -9,4 +9,5 @@ add_executable(joint_enable_control src/joint_enable_control.cpp src/msg/ArmStri
 add_executable(arm_zero_control src/arm_zero_control.cpp src/msg/ArmString_.cpp)
 add_executable(get_arm_joint_angle src/get_arm_joint_angle.cpp src/msg/ArmString_.cpp src/msg/PubServoInfo_.cpp)
 add_executable(d1_joint_controller src/d1_joint_controller.cpp src/msg/ArmString_.cpp)
+add_executable(gripper_open_close src/gripper_open_close.cpp src/msg/ArmString_.cpp)
 target_link_libraries(d1_joint_controller ncurses)

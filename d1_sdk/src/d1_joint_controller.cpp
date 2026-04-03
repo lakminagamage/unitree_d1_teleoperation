@@ -82,7 +82,9 @@ std::string buildAllJointCmd(int seq) {
 }
 
 // Build JSON for single joint control (funcode 1)
+// Gripper (id=6) requires delay_ms:2000 to execute; other joints use 0
 std::string buildSingleJointCmd(int seq, int joint_id, float angle) {
+    int delay_ms = (joint_id == 6) ? 2000 : 0;
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(2);
     oss << "{\"seq\":" << seq
@@ -91,15 +93,15 @@ std::string buildSingleJointCmd(int seq, int joint_id, float angle) {
         << ",\"data\":{"
         << "\"id\":" << joint_id
         << ",\"angle\":" << angle
-        << ",\"delay_ms\":0"
+        << ",\"delay_ms\":" << delay_ms
         << "}}";
     return oss.str();
 }
 
-// Enable all motors (funcode 5, mode 1)
+// Enable all motors (funcode 5, mode 80000 = fully engaged)
 std::string buildEnableCmd(int seq) {
     std::ostringstream oss;
-    oss << "{\"seq\":" << seq << ",\"address\":1,\"funcode\":5,\"data\":{\"mode\":1}}";
+    oss << "{\"seq\":" << seq << ",\"address\":1,\"funcode\":5,\"data\":{\"mode\":80000}}";
     return oss.str();
 }
 
@@ -192,12 +194,8 @@ void drawUI(int selected, const std::string& lastCmd, const std::string& status)
 }
 
 int main(int argc, char** argv) {
-    // Accept optional network interface as first argument, default to known interface
-    std::string netif = "enx00e04c680099";
-    if (argc > 1) netif = argv[1];
-
-    // Init DDS publisher with network interface
-    ChannelFactory::Instance()->Init(0, netif.c_str());
+    // Init DDS (no interface = auto-detect, matching the working pick-and-place code)
+    ChannelFactory::Instance()->Init(0);
     ChannelPublisher<unitree_arm::msg::dds_::ArmString_> publisher(TOPIC);
     publisher.InitChannel();
 
@@ -360,13 +358,23 @@ int main(int argc, char** argv) {
                 msg.data_() = lastCmd;
                 publisher.Write(msg);
                 seq++;
-                status = "Motors ENABLED";
+                // Explicitly enable the gripper motor with full torque
+                std::string gripperEnable = "{\"seq\":" + std::to_string(seq) + ",\"address\":1,\"funcode\":4,\"data\":{\"id\":6,\"mode\":80000}}";
+                msg.data_() = gripperEnable;
+                publisher.Write(msg);
+                seq++;
+                status = "Motors ENABLED (incl. gripper)";
                 break;
             }
 
             case 'd': case 'D': {
                 lastCmd = buildDisableCmd(seq);
                 msg.data_() = lastCmd;
+                publisher.Write(msg);
+                seq++;
+                // Explicitly release the gripper motor
+                std::string gripperDisable = "{\"seq\":" + std::to_string(seq) + ",\"address\":1,\"funcode\":4,\"data\":{\"id\":6,\"mode\":0}}";
+                msg.data_() = gripperDisable;
                 publisher.Write(msg);
                 seq++;
                 status = "Motors DISABLED (released)";
