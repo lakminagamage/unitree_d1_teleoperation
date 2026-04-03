@@ -25,7 +25,7 @@ void Handler1(const void* msg)
 
 int main()
 {
-    ChannelFactory::Instance()->Init(0, "enx9c69d328e892");
+    ChannelFactory::Instance()->Init(0, "enx00e04c680099");
     ChannelSubscriber<unitree_arm::msg::dds_::PubServoInfo_> subscriber(TOPIC);
     subscriber.InitChannel(Handler);
 

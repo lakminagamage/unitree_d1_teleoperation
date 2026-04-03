@@ -43,7 +43,7 @@ Find your Ethernet interface name:
 ip addr
 ```
 
-Look for the interface with `192.168.123.x` — it will look something like `enx9c69d328e892` or `eth0`.
+Look for the interface with `192.168.123.x` — it will look something like `enx00e04c680099` or `eth0`.
 
 Verify connectivity:
 

@@ -193,7 +193,7 @@ void drawUI(int selected, const std::string& lastCmd, const std::string& status)
 
 int main(int argc, char** argv) {
     // Accept optional network interface as first argument, default to known interface
-    std::string netif = "enx9c69d328e892";
+    std::string netif = "enx00e04c680099";
     if (argc > 1) netif = argv[1];
 
     // Init DDS publisher with network interface

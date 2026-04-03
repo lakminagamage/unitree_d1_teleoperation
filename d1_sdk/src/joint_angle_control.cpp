@@ -9,7 +9,7 @@ using namespace unitree::common;
 
 int main()
 {
-    ChannelFactory::Instance()->Init(0, "enx9c69d328e892");
+    ChannelFactory::Instance()->Init(0, "enx00e04c680099");
     ChannelPublisher<unitree_arm::msg::dds_::ArmString_> publisher(TOPIC);
     publisher.InitChannel();
 
